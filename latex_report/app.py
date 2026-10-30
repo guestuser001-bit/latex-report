@@ -32,10 +32,17 @@ for tab, name in zip(tabs, SECTIONS):
             help="Plain text. Separate paragraphs with blank lines. Special LaTeX characters are escaped automatically."
         )
 
-if not shutil.which("pdflatex"):
-    st.error("LaTeX is not installed on this server. For Streamlit Community Cloud, add packages.txt at the repository root and redeploy.")
+latex_executable = shutil.which("pdflatex")
+if not latex_executable:
+    st.error("pdflatex is missing from the server. On Streamlit Community Cloud, check that packages.txt is committed at the GitHub repository root and rebuild/redeploy the app.")
+else:
+    st.sidebar.success(f"LaTeX available: {latex_executable}")
+with st.sidebar.expander("Deployment diagnostics"):
+    st.code(f"pdflatex: {latex_executable or 'NOT FOUND'}\npackages.txt: {(ROOT / 'packages.txt').is_file()}\napp.py: {Path(__file__).resolve()}")
+    st.caption("packages.txt being present here does not prove that its packages were installed. Check the deployment logs.")
 
-if st.button("Generate PDF", type="primary", use_container_width=True):
+if st.button("Generate PDF", type="primary", use_container_width=True, disabled=not latex_executable):
+    st.session_state.pop("pdf_bytes", None)
     with st.spinner("Compiling PDF (requires pdflatex on the server)…"):
         try:
             with tempfile.TemporaryDirectory(prefix="streamlit_latex_") as folder:
@@ -55,6 +62,21 @@ if st.button("Generate PDF", type="primary", use_container_width=True):
             st.error(f"Could not generate PDF: {exc}")
 
 if st.session_state.get("pdf_bytes"):
-    st.download_button("Download PDF", data=st.session_state.pdf_bytes,
-                       file_name="report.pdf", mime="application/pdf", use_container_width=True)
-    st.caption("If you edit the text, click Generate PDF again to update the download.")
+    st.subheader("Generated PDF")
+    st.success("Your report is ready. Download it using the button below.")
+    st.download_button(
+        label="Download PDF",
+        data=st.session_state["pdf_bytes"],
+        file_name="report.pdf",
+        mime="application/pdf",
+        use_container_width=True,
+        key="download_report_pdf",
+        on_click="ignore",
+    )
+    st.subheader("PDF preview")
+    st.caption("The preview uses Streamlit's native PDF viewer rather than a browser-blocked data URL.")
+    if hasattr(st, "pdf"):
+        st.pdf(st.session_state["pdf_bytes"], height=780)
+    else:
+        st.info("For an inline PDF preview, upgrade Streamlit to a version that supports st.pdf. The download button above works independently.")
+    st.caption("If you edit the report, click Generate PDF again to update the PDF.")

@@ -71,3 +71,26 @@ Open the local address printed in your terminal (usually `http://localhost:8501`
 **Privacy and storage:** This app does not implement authentication or permanent report storage. Report text lives in the browser session; generated PDFs are held in session memory. Do not enter confidential material into a public deployment.
 
 **Local test:** Install `requirements.txt` with pip, install `pdflatex` separately, then run `streamlit run app.py`.
+
+
+## Fix: `pdflatex not found` on Streamlit Community Cloud
+
+1. In GitHub, verify that `packages.txt` is **at the repository root**, beside `app.py`, and contains the TeX Live packages. Uploading the ZIP file itself is not enough; upload its **extracted contents**.
+2. Verify the deployed repository, branch, and main file path (`app.py`) in Streamlit Cloud.
+3. Rebuild/redeploy the app so system packages are installed; check build logs for `apt`/TeX Live installation errors. A simple browser refresh will not install missing packages.
+4. Expand **Deployment diagnostics** in the app. It should show `pdflatex: /usr/bin/pdflatex` (or another executable path).
+5. If it still says NOT FOUND, check the build logs before attempting to generate a PDF.
+
+**Local use:** `packages.txt` is only for the cloud Linux environment. Install TeX Live/MacTeX/MiKTeX separately on your computer and ensure `pdflatex` is on PATH.
+
+
+## Local browser launch and PDF preview
+
+Install dependencies, then run `python3 run_local.py` (macOS/Linux) or `python run_local.py` (Windows). The launcher waits for Streamlit to become healthy and opens `http://localhost:8501` in your default browser. Stop with Ctrl+C. You can still use `streamlit run app.py` normally.
+
+Click **Generate PDF** to compile the report and show an embedded PDF preview above the Download PDF button. Some browsers block embedded data-URI PDFs; use the download button as a fallback. A working `pdflatex` installation is required to compile PDFs.
+
+
+## Chrome-safe PDF download
+
+The PDF is downloaded with Streamlit's native `st.download_button` and stored in session state. The inline preview uses `st.pdf` rather than a `data:` iframe, which Chrome may block. Run with `python -m streamlit run app.py`. If you have an older Streamlit installation, run `python -m pip install -r requirements.txt --upgrade`.
